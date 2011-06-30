@@ -20,8 +20,6 @@ var assert          = require('assert'),
         
 util.inherits(simple, EventEmitter);
 
-console.log((new Buffer('b25l','base64').toString('base64')));
-
 vows.describe('how to use draino').addBatch(
 {
     'Calling flush' : {
@@ -205,6 +203,27 @@ vows.describe('how to use draino').addBatch(
             assert.strictEqual(data[2], 'threeforall');
         }
     },
+    'Flushing N read streams where the streams are in ONE array' : {
+        topic : function () {
+            var accumulate = [];
+            return draino.flush().from([
+                new simple('data', 'end', ['i','am','first'], 5),
+                new simple('data', 'end', ['second','stream','here'], 5),
+                new simple('data', 'end', ['three','for','all'], 5)
+            ]).toMe('got1').on('got1',function (data) {
+                accumulate[accumulate.length] = data;
+                if (accumulate.length === 3) {
+                    this.emit('success', accumulate);
+                }
+            });
+        },
+        'will chunk the streams to you.' : function (error, data) {
+            assert.strictEqual(data.length, 3);
+            assert.strictEqual(data[0], 'iamfirst');
+            assert.strictEqual(data[1], 'secondstreamhere');
+            assert.strictEqual(data[2], 'threeforall');
+        }
+    },
     'Flushing N read streams to a callback' : {
         topic : function () {
             var accumulate = [],
@@ -272,6 +291,30 @@ vows.describe('how to use draino').addBatch(
             assert.strictEqual(data[0].toString('utf-8'), 'one');
             assert.strictEqual(data[1].toString('utf-8'), 'two');
             assert.strictEqual(data[2].toString('utf-8'), 'three');
+        }
+    },
+    'Flushing an http response' : {
+        topic : function(){
+           var self = this,
+               port = Math.floor(Math.random()*10000+7000),
+               server = require('http').createServer(function(request, response) {
+                   response.end('Well this actualy works?');
+                   server.close();
+               });
+           
+           server.listen(port,'localhost');
+           
+           require('http').get({
+               host: 'localhost',
+               port: port,
+           }, function (response) {
+               response.setEncoding('utf8');
+               draino.flush(response).to(self.callback)
+           });
+        },
+        'will return all the data.' : function(error, data) {
+            assert.ok(typeof data === 'string');
+            assert.strictEqual(data, 'Well this actualy works?');
         }
     },
 }).export(module);
