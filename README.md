@@ -96,7 +96,7 @@ Example usage
 	//flush the data
 	yourEmitter.flush('data').from(manyResponses).toMe('handelPage');
 	
-	//Throttling a nosiy event
+	//Throttling a nosiy event.  Why?  How can you think with all that racket?
 	yourEmitter.flush('nosiyEvent',(function(){
 		var times = 0;
 		return function(chunk){
@@ -121,3 +121,4 @@ TODO
 * handle nested from() calls e.g. flush().from().from().from().to() not even sure what should happen
 * nested accumulation if from() is passed [EventEmitter, EventEmitter,...]?
 * flush an array of literals? e.g. flush(['one','two','three']).to(function(each){}).  Why?  Why not?
+* put in NPM
