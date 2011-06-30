@@ -1,0 +1,29 @@
+{
+    "name": "draino",
+    "version": "0.1.0",
+    "description": "A way to flush data from place to place",
+    "keywords": [
+        "stream",
+        "EventEmitter",
+        "javascript"
+    ],
+   "author" : "Ryan Emery <seebees@gmail.com>",
+    "bugs": {
+        "mail": "seebees@gmail.com",
+        "web": "https://github.com/seebees/draino/issues"
+    },
+    "repositories": [
+        {
+            "type": "git",
+            "url": "https://seebees@github.com/seebees/draino.git"
+        }
+    ],
+    "contributors": [{ "name": "ryan", "email": "seebees@gmail.com" }],
+    "homepage": "https://github.com/seebees/draino",
+    "directories" : { "lib" : "./lib" },
+    "main" : "./lib/draino.js",
+    "engines": { "node": ">= 0.3.7" },
+    "devDependencies" : {
+      "vows"     : ">=0.1.0"
+    }
+}
