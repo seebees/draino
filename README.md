@@ -114,7 +114,7 @@ Example usage
 Running the tests
 -----------------
 
-    vows ./tests/test* --spec 
+    vows ./test/test* --spec 
     
 TODO
 ----
