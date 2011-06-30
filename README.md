@@ -31,6 +31,8 @@ Called after flush.  Defines from whence we are going to receive data.  EndEvent
 
 Called after either flush or from.  Defines the target for our accumulation.  'success' is the default TargetEvent.  Also, if you have an array of elements you can just call .from([]) instead of having to .from.apply(context, []);
 
+Remember if the SourceEmitter emits multiple EndEvents, the TargetEmitter will receive multiple events.  This should make it easy to throttle noisy emitters.
+
 ### flush().toMe(TargetEvent)
 
 Called after either flush or from.  Syntactic sugar for sending arguments to yourself.  Hopefully it should make your code more readable.
@@ -54,6 +56,7 @@ Example usage
 		http   = require('http'),
 		EventEmitter = require('events').EventEmitter;
 		
+	//Very simple example
 	http.get({
 		host: 'www.google.com',
 		port: 80,
@@ -64,6 +67,7 @@ Example usage
 		})
 	});
 	
+	//an exmple that requires a bit of imagination
 	var i, 
 		//imagin this is your special emitter
 		yourEmitter = new EventEmitter(),
@@ -91,6 +95,20 @@ Example usage
 	
 	//flush the data
 	yourEmitter.flush('data').from(manyResponses).toMe('handelPage');
+	
+	//Throttling a nosiy event
+	yourEmitter.flush('nosiyEvent',(function(){
+		var times = 0;
+		return function(chunk){
+			times += 1;
+			if (times >5){
+				this.emit('next');
+			}
+			return chunk;
+		}
+	}())).from('next', nosiyEmitter).toMe('every5').on('every5',function (have5){
+		//do something with your 5 elements
+	});
 
     
 Running the tests
