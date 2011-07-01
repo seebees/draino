@@ -111,7 +111,7 @@ vows.describe('how to use draino').addBatch(
             var s = new simple('data', 'end', ['one','two','three'], 5),
                 c = new EventEmitter();
             
-            draino.flush('data').from('end', s).to('success', c);
+            draino.flush('data').from(s).isDry('end').onEach('success').to(c);
             return c;
         },
         'will return all the data.' : function(error, data) {
