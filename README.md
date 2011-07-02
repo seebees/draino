@@ -3,47 +3,70 @@ Draino 0.1.0
 
 (C) ryan emery (seebees@gmail.com) 2011, Licensed under the MIT-LICENSE
 
-A function to flush data from read streams
+A library to flush data from "read streams."  Works with callbacks or arbitrary events, not just 'end' and 'data'.
 
 Features
 --------
 
-* natural language (flush -> from -> toMe)
-* flushing arbitrary events from many streams into one stream
-* flushing arbitrary events from one stream into many streams
-* flushing arbitrary events from one stream into a callback
-* flushing arbitrary events from many streams into many callbacks
+* natural language ( empty().from(source).to(target).flush() )
+* empties arbitrary events not just 'end' and 'data'
+* empty from many sources to many sources
+* an arbitrary event can fire when all sources are "empty"
+* treats functions as sources and targets
+* helper functions to decorate your EventEmitters
 * fun to write (for me, not you, I don't know anything about your code)
     
     
 API
 ---
 
-### flush(EventEmitter, EventToFlush, OptionalAccumulator)
+### empty(event, [emitter])
 
-The primary entry point.  This function returns a decorated EventEmitter, even if no EventEmitter is passed.  The default event to flush is 'data'.  The function is "overloaded" so it should understand rational calling patters, e.g flush('myEvent').  The OptionalAccumulator will receive all arguments emitted to EventToFlush.  The default accumulator is expecting only one argument, chunk.
+The primary entry point.  Will return either an option setter or your emitter, properly decorated.  The event is the source event you wish to empty.  The default source event is 'data'.
 
-### flush().from(EndEvent, SourceEmitter || functions, SourceEmitter || functions, ...)
+### .from(emitter || functions, ...)
 
-Called after flush.  Defines from whence we are going to receive data.  EndEvent defines when a given accumulation is done.  'end' is default EndEvent.  All other arguments can be either EventEmitters or functions.  If no sources are passed, then the current EventEmitter will be used as the source.  Again, the function is "overloaded" so if you omit EndEvent, I don't mind.  Also, if you have an array of elements you can just call .from([]) instead of having to .from.apply(context, []);
+Defines additional sources to empty.  You can call it with many arguments or an arrays of emitters.  You can call it several times or even with nested arrays.  When I go to empty them I should find them all.  Currently only functions, EventEmitters or classes the inherit from EventEmitters are supported.  Soon I will support literals.
 
-### flush().to()(TargetEvent, TargetEmitter || functions, TargetEmitter || functions, ...)
+### .to()(emitter || functions, ...)
 
-Called after either flush or from.  Defines the target for our accumulation.  'success' is the default TargetEvent.  Also, if you have an array of elements you can just call .from([]) instead of having to .from.apply(context, []);
+Defines targets for the data I am going to empty.  As with .from() you can call .to() with almost any combination of arrays emitters or functions and I should be able to figure it out.
 
-Remember if the SourceEmitter emits multiple EndEvents, the TargetEmitter will receive multiple events.  This should make it easy to throttle noisy emitters.
+Remember if the SourceEmitter(s) emits multiple isDry events (see .isDry), the TargetEmitter(s) will receive multiple onEach events (see .onEach).  This should make it easy to throttle noisy emitters.
 
-### flush().toMe(TargetEvent)
+### .toMe(event)
 
-Called after either flush or from.  Syntactic sugar for sending arguments to yourself.  Hopefully it should make your code more readable.
+Syntactic sugar for sending arguments to yourself .onEach(event).to(me) (see .onEach).  Hopefully it should make your code more readable.
 
-### shine(EventEmitter, EventEmitter, ...)
+### .isDry(event)
 
-A function to decorate your EventEmitter with flush()
+The event I am listening for on your SourceEmitter(s) that tells me they are empty and that I should notify your TargetEmitter(s), give them the accumulated data, and flush my accumulator.  The default isDry event is 'end'.
 
-### shineAllEventEmitters()
+### .onEach(event)
 
-A function to EventEmitter.prototype.flush = flush;  Not sure if you really want to do that, but... laugh in the face of danger!
+The event I will emit to your TargetEmitter(s) along with the accumulated data for each isDry event I receive.  The default onEach event is 'success'.
+
+### .onDone(event)
+
+Optional event I will emit when all SourceEmitters are done.  Will not work if you are expecting multiple isDry events from a given emitter.
+
+### .onAccumulate(function)
+
+Optional accumulation function.  It will be passed all arguments emitted to your source event and you will be returned an array of these values in the onEach event.
+
+### .flush()
+
+Equivalent to run()  This is the last function to call in the chain.  I will line up all the pipes and let'er rip.
+
+### shine(eventEmitter, eventEmitter, ...)
+
+A function to decorate your eventEmitter with empty().  As with to() and from() almost any combination of emitters and arrays will get the job done.
+
+### shinePrototype(EventEmitter)
+
+A function to decorate your EventEmitter children.  e.g. Children.prototype.empty = empty.  As with to() and from() almost any combination of emitters and arrays will get the job done.
+
+NOTE:  If you call shinePrototype() without any arguments I will update EventEmitter.prototype.empty.  Not sure if you really want to do that, but... laugh in the face of danger!
 
 ### Buffer vs string
 
@@ -62,9 +85,9 @@ Example usage
 		port: 80,
 	}, function (response) {
 		response.setEncoding('utf8');
-		draino.flush(response).to(function (data) {
+		draino.empty(response).to(function (data) {
 			//data now has the whole page
-		})
+		}).flush();
 	});
 	
 	//an exmple that requires a bit of imagination
@@ -94,21 +117,28 @@ Example usage
 	}
 	
 	//flush the data
-	yourEmitter.flush('data').from(manyResponses).toMe('handelPage');
+	yourEmitter.empty('data').from(manyResponses).toMe('handelPage').flush();
 	
 	//Throttling a nosiy event.  Why?  How can you think with all that racket?
-	yourEmitter.flush('nosiyEvent',(function(){
-		var times = 0;
-		return function(chunk){
-			times += 1;
-			if (times >5){
-				this.emit('next');
+	yourEmitter.
+		empty('noise').
+		from(nosiyEmitter).
+		.onAccumulate(function(){
+			var times = 0;
+			return function(chunk){
+				times += 1;
+				if (times >5) {
+					this.emit('have5');
+				}
+				return chunk;
 			}
-			return chunk;
-		}
-	}())).from('next', nosiyEmitter).toMe('every5').on('every5',function (have5){
-		//do something with your 5 elements
-	});
+		}())).
+		isDry('have5').
+		toMe('every5').
+		flush().
+		on('every5',function (have5){
+			//do something with your 5 elements
+		});
 
     
 Running the tests
@@ -118,7 +148,5 @@ Running the tests
     
 TODO
 ----
-* handle nested from() calls e.g. flush().from().from().from().to() not even sure what should happen
-* nested accumulation if from() is passed [EventEmitter, EventEmitter,...]?
 * flush an array of literals? e.g. flush(['one','two','three']).to(function(each){}).  Why?  Why not?
 * put in NPM
