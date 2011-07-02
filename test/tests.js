@@ -177,7 +177,7 @@ vows.describe('how to use draino').addBatch(
             assert.strictEqual(data, 'onetwothree');
         }
     },
-    'Flushing N "read streams"' : {
+    'Emptying N "read streams"' : {
         topic : function () {
             var accumulate = [],
                 target = new EventEmitter();
@@ -232,7 +232,7 @@ vows.describe('how to use draino').addBatch(
             assert.strictEqual(data, 'worked');
         }
     },
-    'Flushing to a callback' : {
+    'Emptying to a callback' : {
         topic : function(){
             var s = new simple('data', 'end', ['one','two','three'], 5);
             
@@ -242,7 +242,7 @@ vows.describe('how to use draino').addBatch(
             assert.strictEqual(data, 'onetwothree');
         }
     },
-    'Flushing from a callback' : {
+    'Emptying from a callback' : {
         topic : function(){
             draino.empty().from(function(){
                 return 'onetwothree';
@@ -252,7 +252,7 @@ vows.describe('how to use draino').addBatch(
             assert.strictEqual(data, 'onetwothree');
         }
     },
-    'Flushing read streams and functions' : {
+    'Emptying read streams and functions' : {
         topic : function () {
             var accumulate = [];
             return draino.empty().from(
@@ -273,7 +273,7 @@ vows.describe('how to use draino').addBatch(
             assert.strictEqual(data[2], 'threeforall');
         }
     },
-    'Flushing a stream with no encodeing toMe' : {
+    'Emptying a stream with no encodeing toMe' : {
         topic : function(){
             var s = new simple(
                     'data', 
@@ -299,7 +299,47 @@ vows.describe('how to use draino').addBatch(
             assert.strictEqual(data[2].toString('utf-8'), 'three');
         }
     },
-    'Flushing an http response' : {
+    'Emptying with a custom accumulator' : {
+        topic : function(){
+            var s = new simple('data', 'end', ['one','two','three'], 5);
+            
+            draino.
+                empty(s).
+                to(this.callback).
+                onAccumulate(function(chunk){
+                    return 'here' + chunk;
+                }).
+                flush();
+        },
+        'will return execute the custom accumulator.' : function(error, data) {
+            assert.strictEqual(data, 'hereoneheretwoherethree');
+        }
+    },
+    '.plow(N)' : {
+        topic : function(){
+            var accumulate = [],
+                s = new simple('data', 'end', ['a','a','a','b','b','b','c','c','c'], 5);
+            
+            return draino.
+                empty(s).
+                plow(3).
+                toMe('every3').
+                flush().
+                on('every3',function(data){
+                    accumulate.push(data);
+                    if (accumulate.length === 3) {
+                        this.emit('success', accumulate);
+                    }
+                });
+        },
+        'will cause accumulation to empty for every N source events.' : function(error, data) {
+            assert.strictEqual(data.length, 3);
+            assert.strictEqual(data[0], 'aaa');
+            assert.strictEqual(data[1], 'bbb');
+            assert.strictEqual(data[2], 'ccc');
+        }
+    },
+    'Emptying an http response' : {
         topic : function(){
            var self = this,
                port = Math.floor(Math.random()*10000+7000),

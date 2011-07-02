@@ -123,17 +123,7 @@ Example usage
 	yourEmitter.
 		empty('noise').
 		from(nosiyEmitter).
-		.onAccumulate(function(){
-			var times = 0;
-			return function(chunk){
-				times += 1;
-				if (times >5) {
-					this.emit('have5');
-				}
-				return chunk;
-			}
-		}())).
-		isDry('have5').
+		.plow(5).
 		toMe('every5').
 		flush().
 		on('every5',function (have5){
