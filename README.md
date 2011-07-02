@@ -28,7 +28,7 @@ The primary entry point.  Will return either an option setter or your emitter, p
 
 Defines additional sources to empty.  You can call it with many arguments or an arrays of emitters.  You can call it several times or even with nested arrays.  When I go to empty them I should find them all.  Currently only functions, EventEmitters or classes the inherit from EventEmitters are supported.  Soon I will support literals.
 
-### .to()(emitter || functions, ...)
+### .to(emitter || functions, ...)
 
 Defines targets for the data I am going to empty.  As with .from() you can call .to() with almost any combination of arrays emitters or functions and I should be able to figure it out.
 
@@ -53,6 +53,10 @@ Optional event I will emit when all SourceEmitters are done.  Will not work if y
 ### .onAccumulate(function)
 
 Optional accumulation function.  It will be passed all arguments emitted to your source event and you will be returned an array of these values in the onEach event.
+
+### .plow(number)
+
+Optional element to fire onEach event every N times and pass current accumulation.  Used to throttle output.
 
 ### .flush()
 
