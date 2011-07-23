@@ -85,7 +85,7 @@ vows.describe('how to use draino').addBatch(
             assert.ok(typeof op.onAccumulate === 'function');
             assert.ok(typeof op.toMe === 'function');
             assert.ok(typeof op.flush === 'function');
-        },
+        }
     },
     'Passing empty() an EventEmitter' : {
         topic : function(){
@@ -352,7 +352,7 @@ vows.describe('how to use draino').addBatch(
            
            require('http').get({
                host: 'localhost',
-               port: port,
+               port: port
            }, function (response) {
                response.setEncoding('utf8');
                draino.empty(response).to(self.callback).flush();
