@@ -103,7 +103,7 @@ vows.describe('StreamBuffer').addBatch(
         'will emit full when source has ended' : function (error, sb) {
             assert.ok(sb.source().hasEnded);
         },
-        'will indetify that the source has ended' : function (error, sb) {
+        'will identify that the source has ended' : function (error, sb) {
             assert.ok(sb.hasEnded());
         },
         '.read() will return all the data in the buffer' : function (error, sb) {
@@ -116,7 +116,7 @@ vows.describe('StreamBuffer').addBatch(
             'will write the data to the write stream' : function () {
                 assert.strictEqual(this.write.tmp, ' A1  A2  A3 ');
             },
-            'will return the oritinal source passed to StreamBuffer' : function (error, source) {
+            'will return the original source passed to StreamBuffer' : function (error, source) {
                 assert.strictEqual(source, this.read);
             }
         }
@@ -175,7 +175,7 @@ vows.describe('StreamBuffer').addBatch(
                 this.write.write('OMFG');
                 this.callback(null, this.write);
             },
-            'will write the buffer to the WriteStream and remove itsself' : function (error, writeStream) {
+            'will write the buffer to the WriteStream and remove itself' : function (error, writeStream) {
                 assert.strictEqual(writeStream.tmp, ' A1  A2  A3 OMFG');
             },
             'will not emit end to the writeStream' : function (error, writeStream) {

@@ -50,7 +50,7 @@ vows.describe('snake').addBatch(
                                 //So they would both log.  I'm going to leave it for now.
                                 self.anotherSnake = draino.snake('newSnake', true);
                                 snake.too();
-                                console.log('Multipule snakes can watch at the same time.');
+                                console.log('Multiple snakes can watch at the same time.');
                                 
                             });
                         });
@@ -61,7 +61,7 @@ vows.describe('snake').addBatch(
                     self.callback();
                 },10)
             },
-            'will buffer output accross event loops' : function () {
+            'will buffer output across event loops' : function () {
                 assert.strictEqual(
                     this.snake.read(),
                         'Statements after a new snake are appended.\n'                          +
@@ -69,13 +69,13 @@ vows.describe('snake').addBatch(
                         'Even if they are in a different function\n'                            +
                         'Even if they no not have scope access to snake\n'                      +
                         'Statements before snake.too() are appended.\n'                         +
-                        'Multipule snakes can watch at the same time.\n'
+                        'Multiple snakes can watch at the same time.\n'
                 );
             },
             'another snake can watch at the same time.' : function () {
                 assert.strictEqual(
                     this.anotherSnake.read(),
-                        'Multipule snakes can watch at the same time.\n'
+                        'Multiple snakes can watch at the same time.\n'
                 );
             }
         }

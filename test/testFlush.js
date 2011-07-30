@@ -68,7 +68,7 @@ util.inherits(SimpleWrite, Stream);
 util.inherits(SimpleRead, Stream);
 util.inherits(ShinnyEmitter, process.EventEmitter);
 
-vows.describe('draino.funnel').addBatch(
+vows.describe('draino.flush').addBatch(
 {
     'the basic test objects' : {
         topic : function () {
@@ -82,13 +82,13 @@ vows.describe('draino.funnel').addBatch(
             assert.strictEqual(data, ' A1  A2  A3 ');
         }
     },
-    'draino.funnel(ReadStream, WriteStream, {serial:true, buffer:false})' : {
+    'draino.flush(ReadStream, WriteStream, {serial:true})' : {
         topic : function () {
             this.w = new SimpleWrite();
-            this.newWrite = draino.funnel(
+            this.newWrite = draino.flush(
                 new SimpleRead([' A1 ', ' A2 ', ' A3 '], 10),
                 this.w,
-                {serial:true, buffer:false}
+                {serial:true}
             );
             
             return this.newWrite;
@@ -101,10 +101,10 @@ vows.describe('draino.funnel').addBatch(
             assert.strictEqual(data, ' A1  A2  A3 ');
         }
     },
-    'multiple draino.funnel(ReadStream, WriteStream, {serial:true, buffer:false})' :{
+    'multiple draino.flush(ReadStream, WriteStream, {serial:true})' :{
         topic : function () {
             this.newWrite           = new SimpleWrite();
-            this.newWrite.funnel    = draino.SerialPump.prototype.funnel;
+            this.newWrite.flush    = draino.SerialPump.prototype.funnel;
             this.newWrite.myPipes   = []
             this.newWrite.currtmp   = []
             
@@ -113,20 +113,20 @@ vows.describe('draino.funnel').addBatch(
                 this.currtmp.push(this.tmp);
             });
             
-            draino.funnel(
+            draino.flush(
                 new SimpleRead([' A1 ' , ' A2 ', ' A3 '], 10),
                 this.newWrite,
-                {serial:true, buffer:false}
+                {serial:true}
             );
-            draino.funnel(
+            draino.flush(
                 new SimpleRead([' B1 ' ,' B2 ', ' B3 '], 5),
                 this.newWrite,
-                {serial:true, buffer:false}
+                {serial:true}
             );
-            draino.funnel(
+            draino.flush(
                 new SimpleRead([' C1 ' , ' C2 ', ' C3 '], 20),
                 this.newWrite,
-                {serial:true, buffer:false}
+                {serial:true}
             );
             
             return this.newWrite;
@@ -134,51 +134,6 @@ vows.describe('draino.funnel').addBatch(
         'will write all the data to the WriteStream in order' : function (data) {
             assert.ok(typeof data === 'string');
             
-            assert.strictEqual(data, ' A1  A2  A3  B1  B2  B3  C1  C2  C3 ');
-        },
-        'will emit pipe for each stream in order' : function () {
-            assert.ok(this.newWrite.myPipes.length === 3);
-            assert.strictEqual(this.newWrite.currtmp[0], '');
-            assert.strictEqual(this.newWrite.currtmp[1], ' A1  A2  A3 ');
-            assert.strictEqual(this.newWrite.currtmp[2], ' A1  A2  A3  B1  B2  B3 ');
-        },
-        'will take serial time to complete' : function () {
-            var timeToComplete = this.newWrite.stopTime.getTime() - this.newWrite.startTime.getTime();
-            assert.ok(timeToComplete > 10*3 + 5*3 + 20*3);
-        }
-    },
-    'multiple draino.funnel(ReadStream, WriteStream, {serial:true, buffer:true})' :{
-        topic : function () {
-            this.newWrite           = new SimpleWrite();
-            this.newWrite.funnel    = draino.SerialPump.prototype.funnel;
-            this.newWrite.myPipes   = []
-            this.newWrite.currtmp   = []
-            
-            this.newWrite.on('pipe', function(source) {
-                this.myPipes.push(source);
-                this.currtmp.push(this.tmp);
-            });
-            
-            draino.funnel(
-                new SimpleRead([' A1 ' , ' A2 ', ' A3 '], 10),
-                this.newWrite,
-                {serial:true, buffer:true}
-            );
-            draino.funnel(
-                new SimpleRead([' B1 ' ,' B2 ', ' B3 '], 20),
-                this.newWrite,
-                {serial:true, buffer:true}
-            );
-            draino.funnel(
-                new SimpleRead([' C1 ' , ' C2 ', ' C3 '], 5),
-                this.newWrite,
-                {serial:true, buffer:true}
-            );
-            
-            return this.newWrite;
-        },
-        'will write all the data to the WriteStream in order' : function (data) {
-            assert.ok(typeof data === 'string');
             assert.strictEqual(data, ' A1  A2  A3  B1  B2  B3  C1  C2  C3 ');
         },
         'will emit pipe for each stream in order' : function () {
@@ -189,11 +144,10 @@ vows.describe('draino.funnel').addBatch(
         },
         'will take less then serial time to complete' : function () {
             var timeToComplete = this.newWrite.stopTime.getTime() - this.newWrite.startTime.getTime();
-            //console.log(timeToComplete);
             assert.ok(timeToComplete < 10*3 + 5*3 + 20*3);
         }
     },
-    'multiple draino.funnel(ReadStream, WriteStream, {serial:false, buffer:true})' :{
+    'multiple draino.flush(ReadStream, WriteStream, {serial:false})' :{
         topic : function () {
             this.newWrite           = new SimpleWrite();
             this.newWrite.myPipes   = [];
@@ -204,20 +158,20 @@ vows.describe('draino.funnel').addBatch(
                 this.currtmp.push(this.tmp);
             });
             
-            draino.funnel(
+            draino.flush(
                 new SimpleRead([' A1 ' , ' A2 ', ' A3 '], 10),
                 this.newWrite,
-                {serial:false, buffer:true}
+                {serial:false}
             );
-            draino.funnel(
+            draino.flush(
                 new SimpleRead([' B1 ' ,' B2 ', ' B3 '], 20),
                 this.newWrite,
-                {serial:false, buffer:true}
+                {serial:false}
             );
-            draino.funnel(
+            draino.flush(
                 new SimpleRead([' C1 ' , ' C2 ', ' C3 '], 5),
                 this.newWrite,
-                {serial:false, buffer:true}
+                {serial:false}
             );
             
             return this.newWrite;
@@ -238,18 +192,18 @@ vows.describe('draino.funnel').addBatch(
             assert.ok(timeToComplete < 10*3 + 5*3 + 20*3);
         }
     },
-    'draino.funnel' : {
+    'draino.flush' : {
         topic: function () {
             var fs = require('fs');
             
-            var times       = 21;
+            var times       = 5;
             var bufferSize  = 1024*20;
             var i;
             
             var pipeWrite   = new SimpleWrite();
             var pipeStreams = [];
             
-            var funnelWrite = new SimpleWrite();
+            var flushWrite = new SimpleWrite();
             
             for (i = 0; i < times; i++) {
                 var tmp = fs.createReadStream(__filename, {bufferSize:bufferSize});
@@ -274,12 +228,12 @@ vows.describe('draino.funnel').addBatch(
             next.pipe(pipeWrite, {end:false});
             next.on('end', nextPipe);
             
-            var funnelWrite = new SimpleWrite();
+            var flushWrite = new SimpleWrite();
             
             for (i = 0; i < times; i++) {
-                draino.funnel(
+                draino.flush(
                     fs.createReadStream(__filename, {bufferSize:bufferSize}),
-                    funnelWrite
+                    flushWrite
                 );
             }
             
@@ -288,20 +242,20 @@ vows.describe('draino.funnel').addBatch(
             var self = this
             pipeWrite.on('success', function () {
                 self.pipeDone = true;
-                if (self.funnelDone) {
+                if (self.flushDone) {
                     self.callback(null, {
                         pipe   : pipeWrite,
-                        funnel : funnelWrite
+                        flush  : flushWrite
                     });
                 }
             });
             
-            funnelWrite.on('success', function () {
-                self.funnelDone = true;
+            flushWrite.on('success', function () {
+                self.flushDone = true;
                 if (self.pipeDone) {
                     self.callback(null, {
                         pipe   : pipeWrite,
-                        funnel : funnelWrite
+                        flush  : flushWrite
                     });
                 }
             });
@@ -311,14 +265,14 @@ vows.describe('draino.funnel').addBatch(
             //console.dir({
             //    pipeStart   : data.pipe.startTime.getTime(),
             //    pipeStop    : data.pipe.stopTime.getTime(),
-            //    funnelStart : data.funnel.startTime.getTime(),
-            //    funnelStop  : data.funnel.stopTime.getTime()
+            //    flushStart : data.funnel.startTime.getTime(),
+            //    flushStop  : data.funnel.stopTime.getTime()
             //})
             
-            assert.ok(data.funnel.startTime = data.pipe.startTime);
-            assert.ok(data.funnel.stopTime  <= data.pipe.stopTime);
+            assert.ok(data.flush.startTime = data.pipe.startTime);
+            assert.ok(data.flush.stopTime  <= data.pipe.stopTime);
             
-            //console.log('Faster:' + (data.pipe.stopTime.getTime() - data.funnel.stopTime.getTime()));
+            //console.log('Faster:' + (data.pipe.stopTime.getTime() - data.flush.stopTime.getTime()));
         }
     }
 }).export(module);
