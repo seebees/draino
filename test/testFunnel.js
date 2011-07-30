@@ -200,8 +200,6 @@ vows.describe('draino.funnel').addBatch(
             this.newWrite.myPipes   = [];
             this.newWrite.currtmp   = [];
             
-            this.newWrite._buffer = [];
-            
             this.newWrite.on('pipe', function(source) {
                 this.myPipes.push(source);
                 this.currtmp.push(this.tmp);
