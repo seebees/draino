@@ -3,137 +3,156 @@ Draino 0.1.0
 
 (C) ryan emery (seebees@gmail.com) 2011, Licensed under the MIT-LICENSE
 
-A library to flush data from "read streams."  Works with callbacks or arbitrary events, not just 'end' and 'data'.
+A library to flush data from "read streams."
 
 Features
 --------
 
-* natural language ( empty().from(source).to(target).flush() )
-* empties arbitrary events not just 'end' and 'data'
-* empty from many sources to many sources
-* an arbitrary event can fire when all sources are "empty"
-* treats functions as sources and targets
-* helper functions to decorate your EventEmitters
+* simple, .flush(readStream).flush(readStream)
+* mix and match flush and funnel for the same destination
+* will serialize read sources into one write source
+* StreamBuffer allows piping of many Streams to take less then serial time.
+* helper functions to decorate your Streams
+* SerialPump is a class that inherits from Stream and exposes funnel and flush
+* Snake to help with async debugging
 * fun to write (for me, not you, I don't know anything about your code)
     
     
 API
 ---
 
-### empty(event, [emitter])
+### SerialPump::funnel(source, options)
 
-The primary entry point.  Will return either an option setter or your emitter, properly decorated.  The event is the source event you wish to empty.  The default source event is 'data'.
+The instance is the destination.  
+Source should be self explanatory.  
+Options are:
+    {
+    //buffer the output until the dest is ready.  default is true
+        buffer : [true|false],
+    //if a stream completes before the dest is ready for it 
+    //should the stream move itself to the top of the que [false] or 
+    //do nothing [true] 
+        serial : [true|false]
+    }
+before each source is piped to the destination the 'pipe' event is emitted just like Stream::pipe.
+Once every source has been funneled to the destination dest.end() is called.  (//TODO should there be an option to override this?)
 
-### .from(emitter || functions, ...)
+the return value is the destination so you can funnel another source.
 
-Defines additional sources to empty.  You can call it with many arguments or an arrays of emitters.  You can call it several times or even with nested arrays.  When I go to empty them I should find them all.  Currently only functions, EventEmitters or classes the inherit from EventEmitters are supported.  Soon I will support literals.
 
-### .to(emitter || functions, ...)
+### SerialPump::flush(source, options)
 
-Defines targets for the data I am going to empty.  As with .from() you can call .to() with almost any combination of arrays emitters or functions and I should be able to figure it out.
+The instance is the destination.  
+Source should be self explanatory.  
+Options are:
+    {
+    //if a stream completes before the dest is ready for it 
+    //should the stream move itself to the top of the que [false] or 
+    //do nothing [true] 
+        serial : [true|false]
+    }
+before each source is piped to the destination the 'pipe' event is emitted just like Stream::pipe.
+Once every source has been funneled to the destination dest.end() is called.  (//TODO should there be an option to override this?) 
 
-Remember if the SourceEmitter(s) emits multiple isDry events (see .isDry), the TargetEmitter(s) will receive multiple onEach events (see .onEach).  This should make it easy to throttle noisy emitters.
+the return value is the destination so you can flush another source.
 
-### .toMe(event)
+### draino.funnel(source, destination, options)
 
-Syntactic sugar for sending arguments to yourself .onEach(event).to(me) (see .onEach).  Hopefully it should make your code more readable.
+A method to funnel Streams that are not decorated
 
-### .isDry(event)
+### draino.flush(source, destination, options)
 
-The event I am listening for on your SourceEmitter(s) that tells me they are empty and that I should notify your TargetEmitter(s), give them the accumulated data, and flush my accumulator.  The default isDry event is 'end'.
+A method to flush Streams that are not decorated
 
-### .onEach(event)
+### draino.shine()
 
-The event I will emit to your TargetEmitter(s) along with the accumulated data for each isDry event I receive.  The default onEach event is 'success'.
+A method to decorate Streams.  It can decorate instances or classes.  It can handle an array of things or N number of arguments or any combination.  Basically you give it a heap of crap and it will try and decorate it for you. e.g.
+draino.shine([a, b, c], [MyStreamClass, [another, StreamClass]], lastStream);
 
-### .onDone(event)
+### new StreamBuffer(destination, source, options)
 
-Optional event I will emit when all SourceEmitters are done.  Will not work if you are expecting multiple isDry events from a given emitter.
+A Stream that buffers writes to be read later.  The source and destination are used by StreamBuffer::drain to extract itself from the equation.
+Currently the only option is size.  Which will cause the StreamBuffer to pause the source once a total about of data > size has been written.
 
-### .onAccumulate(function)
+### If you create a StreamBuffer with a destination and a source
+## StreamBuffer::drain(encoding)
 
-Optional accumulation function.  It will be passed all arguments emitted to your source event and you will be returned an array of these values in the onEach event.
+if the underlying source has ended:
+* emit's 'pipe' to the destination
+* if the destination is writable, dest.write(self.read(encoding))
+* if the destination write returns === false, wait for 'drain' to emit 'end' otherwise emit 'end'
+* emit 'close'
+* self.destroy()
+* eat the drain method in case someone tries to call it twice
+* return the underlying source
 
-### .plow(number)
+if the underlying source has not ended:
+* source.pipe(dest)
+* if dest.writable, dest.write(self.read(encoding))
+* if dest.write returns === false, source.pause(), otherwise source.resume()
+* emit 'close'
+* self.destroy()
+* eat the drain method in case someone tries to call it twice
+* return the underlying source
 
-Optional element to fire onEach event every N times and pass current accumulation.  Used to throttle output.
+### If you create a StreamBuffer with only a destination
+The stream buffer will replace the destination write method with StreamBuffer::write
+## StreamBuffer::drain(encoding)
+* replace the destination write method
+* dest.write(self.read(encoding))
+* self.destroy()
 
-### .flush()
+### If you create a StreamBuffer WITHOUT either a destination or a source
+The drain method will not exist.
 
-Equivalent to run()  This is the last function to call in the chain.  I will line up all the pipes and let'er rip.
+//TODO if you create a StreamBuffer with ONLY a source drain should take an optional destination argument  
 
-### shine(eventEmitter, eventEmitter, ...)
-
-A function to decorate your eventEmitter with empty().  As with to() and from() almost any combination of emitters and arrays will get the job done.
-
-### shinePrototype(EventEmitter)
-
-A function to decorate your EventEmitter children.  e.g. Children.prototype.empty = empty.  As with to() and from() almost any combination of emitters and arrays will get the job done.
-
-NOTE:  If you call shinePrototype() without any arguments I will update EventEmitter.prototype.empty.  Not sure if you really want to do that, but... laugh in the face of danger!
+### StreamBuffer::writable
+true, 'cuase it is a write stream.
+### StreamBufer::write(chunk)
+the write method.  Currently I do not take encoding.  it is on the TODO list
+### StreamBuffer::read(encoding)
+returns all data written to the StreamBuffer.
+### StreamBuffer::end()
+sets StreamBuffer::hasEnded = true and emits('full')
+### StreamBuffer::destroy()
+removes all listeners and sets up the object to be GCed
+### StreamBuffer::destroySoon()
+drains the StreamBuffer and .destroy() on 'end'
+### StreamBuffer::close()
+sets hasEnded = true
+### StreamBuffer::hasEnded()
+returns whether or not the underlying source has ended.
+### StreamBuffer::source()
+returns the underlying source
+### StreamBuffer::dest()
+returns the underlying destination
 
 ### Buffer vs string
 
-If the stream you are flushing returns buffers you will get an array of them.  Otherwise you will get a string.  I'm kind of on the fence about this.  I'm thinking that I should always return an array, since if you want to, you can always .join(''); yourself...
+If your source stream has an Encoding it will write to the StreamBuffer with string.  When you read or drain, I will return one big string.  If your source does not have an encoding it will write to the StreamBuffer with Buffer.  In this case when you drain I will return one big Buffer.
 
 Example usage
 -------------
 
     var draino = require('draino'),
-		http   = require('http'),
-		EventEmitter = require('events').EventEmitter;
+        http   = require('http'),
+        fs     = require('fs');
 		
 	//Very simple example
-	http.get({
-		host: 'www.google.com',
+	var request =http.request({
+		host: 'SomeHostThatWantsData.com',
 		port: 80,
 	}, function (response) {
-		response.setEncoding('utf8');
-		draino.empty(response).to(function (data) {
-			//data now has the whole page
-		}).flush();
+		//do stuff
 	});
-	
-	//an exmple that requires a bit of imagination
-	var i, 
-		//imagin this is your special emitter
-		yourEmitter = new EventEmitter(),
-		//imagin this was a lot of streams (files, request, crazy stuff)
-		manyResponses = [];
-	
-	//decorate your emitter
-	draino.shine(yourEmitter);
-	
-	//your emitter does something with pages
-	yourEmitter.on('handelPage', function(page) {
-		//do something with each page
-	});
-	
-	//get a lot of streams
-	for (i=0; i<10; i++) {
-		http.get({
-			host: 'www.google.com',
-			port: 80,
-		}, function (response) {
-			response.setEncoding('utf8');
-			manyResponses.push(response);			
-		});
-	}
-	
-	//flush the data
-	yourEmitter.empty('data').from(manyResponses).toMe('handelPage').flush();
-	
-	//Throttling a nosiy event.  Why?  How can you think with all that racket?
-	yourEmitter.
-		empty('noise').
-		from(nosiyEmitter).
-		.plow(5).
-		toMe('every5').
-		flush().
-		on('every5',function (have5){
-			//do something with your 5 elements
-		});
-
+        
+        for(var i=0; i<20; i++) {
+          draino.funnel(
+              fs.createReadStream(__filename, {bufferSize:bufferSize}),
+              request
+          )
+        }
     
 Running the tests
 -----------------
@@ -142,5 +161,7 @@ Running the tests
     
 TODO
 ----
-* flush an array of literals? e.g. flush(['one','two','three']).to(function(each){}).  Why?  Why not?
+* prime, a way to make things into streams (function, literals, arrays etc)
+* StreamBuffer should take a callback as a destination
+* flush should take a callback as a destination
 * put in NPM
